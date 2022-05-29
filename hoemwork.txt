@@ -1,0 +1,132 @@
+package com.example.springweek3.controoller;
+
+
+import com.example.springweek3.model.Movie;
+import com.example.springweek3.servise.MovieServise;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.Errors;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("api/v1/movie")
+public class MovieControoller {
+
+    private final MovieServise movieServise;
+
+    @GetMapping
+    public ResponseEntity getMovie(){
+        return ResponseEntity.status(200).body(movieServise.getMovie());
+    }
+
+    @PostMapping
+    public ResponseEntity addMovie(@RequestBody @Valid Movie movie, Errors errors){
+        if(errors.hasErrors()){
+            return ResponseEntity.status(400).body(errors.getFieldError().getDefaultMessage());}
+        movieServise.addMovie(movie);
+        return ResponseEntity.status(200).body("Movie added!");
+
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity updateMovie(@RequestBody @Valid Movie movie, @PathVariable Integer id,Errors errors){
+        if(errors.hasErrors()){
+            return ResponseEntity.status(400).body(errors.getFieldError().getDefaultMessage());}
+        movieServise.updateMovie(movie,id);
+        return ResponseEntity.status(200).body("Update Movie !");
+
+    }
+    @DeleteMapping
+    public ResponseEntity deletMovie(@PathVariable Integer id){
+movieServise.removeMovie(id);
+        return ResponseEntity.status(200).body("delet Movie");
+    }
+
+}
+/////
+package com.example.springweek3.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import net.bytebuddy.implementation.bind.annotation.Empty;
+import org.hibernate.validator.constraints.Range;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.validation.constraints.*;
+import java.util.Date;
+@AllArgsConstructor  @NoArgsConstructor @Data
+@Entity
+public class Movie {
+    @Id
+    @Min(value = 3,message ="Length more than 3" ) @Column(unique = true,nullable = false )    private Integer id;
+    @Size(min = 2,message ="Length more than 2" ) @Column(nullable = false,unique = true )
+    private String name;
+    @NotEmpty (message = "Cannot be null ")@Column(nullable = false)
+    @Pattern(regexp = ("Drama|Action|Comedy"))
+    private String genre;
+    @Positive @NotNull @Range(min = 1,max = 5,message = "must be between 1 - 5")
+    private Double rating;
+    @NotNull @Positive @Min(value = 60,message = "must be more 60")
+    private Double  duration;
+    @NotEmpty @Pattern(regexp ="^(1[0-2]|0[1-9])/(3[01]|[12][0-9]|0[1-9])/[0-9]{4}$")
+    private String launchDate;
+}
+/////
+
+package com.example.springweek3.repoistory;
+
+import com.example.springweek3.model.Movie;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface MovieRepoistory extends JpaRepository<Movie,Integer> {
+
+}
+
+///
+
+package com.example.springweek3.servise;
+
+import com.example.springweek3.model.Movie;
+import com.example.springweek3.repoistory.MovieRepoistory;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class MovieServise {
+    private final MovieRepoistory movieRepoistory;
+    public List<Movie> getMovie() {
+        return movieRepoistory.findAll();
+    }
+
+    public void addMovie(Movie movie) {
+
+        movieRepoistory.save(movie);
+    }
+
+    public void updateMovie(Movie movie, Integer id) {
+        Movie oldovie=movieRepoistory.findById(id).get();
+        oldovie.setId(movie.getId());
+        oldovie.setName(movie.getName());
+        oldovie.setDuration(movie.getDuration());
+        oldovie.setGenre(movie.getGenre());
+        oldovie.setRating(movie.getRating());
+        oldovie.setLaunchDate(movie.getLaunchDate());
+       movieRepoistory.save(oldovie);
+    }
+
+    public void removeMovie(Integer id) {
+
+        movieRepoistory.deleteById(id);
+    }
+}
